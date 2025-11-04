@@ -178,8 +178,8 @@ class DQN:
 
                     if verbose:
                         print(f"\nEvaluation: Timesteps = {t + 1}")
-                        print(f"Episode length = {episode_length["mean"]} +/- {episode_length["std"]}")
-                        print(f"Episode reward = {episode_reward["mean"]} +/- {episode_reward["std"]}")
+                        print(f"Episode length = {episode_length["mean"]:.2f} +/- {episode_length["std"]:.2f}")
+                        print(f"Episode reward = {episode_reward["mean"]:.2f} +/- {episode_reward["std"]:.2f}")
 
                     if episode_reward["mean"] > best_reward:
                         best_reward = episode_reward["mean"]
