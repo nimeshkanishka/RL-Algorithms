@@ -1,0 +1,1 @@
+from rl_algorithms.DQN.policies import MLPPolicy, CNNPolicy

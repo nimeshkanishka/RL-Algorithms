@@ -1,13 +1,15 @@
+from typing import Optional, Any
 import torch
 import numpy as np
 import gymnasium as gym
 from gymnasium.spaces import Box, Discrete
 from rl_algorithms.common.buffers.replay_buffer import ReplayBuffer
-from rl_algorithms.DQN.network import QNetwork
+from rl_algorithms.DQN.policies import MLPPolicy, CNNPolicy
 
 class DQN:
     def __init__(
         self,
+        policy: str,
         env: gym.Env,
         learning_rate: float = 1e-4,
         buffer_size: int = 1_000_000,
@@ -20,9 +22,16 @@ class DQN:
         exploration_fraction: float = 0.1,
         exploration_initial_eps: float = 1,
         exploration_final_eps: float = 0.05,
-        seed: int | None = None,
+        policy_kwargs: Optional[dict[str, Any]] = None,
+        seed: Optional[int] = None,
         device: str = "auto"
     ):
+        # Validate policy
+        valid_policies = ["MLPPolicy", "CNNPolicy"]
+        if policy not in valid_policies:
+            raise ValueError(f"Unknown policy '{policy}'. Must be one of {valid_policies}.")            
+        
+        self.policy = policy
         self.learning_rate = learning_rate
         self.buffer_size = buffer_size
         self.learning_starts = learning_starts
@@ -34,6 +43,7 @@ class DQN:
         self.exploration_fraction = exploration_fraction
         self.exploration_initial_eps = exploration_initial_eps
         self.exploration_final_eps = exploration_final_eps
+        self.policy_kwargs = policy_kwargs or {}
         self.seed = seed
 
         self.device = torch.device(("cuda" if torch.cuda.is_available() else "cpu") if device == "auto" else device)
@@ -74,6 +84,7 @@ class DQN:
         checkpoint = torch.load(path, map_location=device, weights_only=False)
 
         # Extract hyperparameters
+        policy = checkpoint["policy"]
         learning_rate = checkpoint["learning_rate"]
         buffer_size = checkpoint["buffer_size"]
         learning_starts = checkpoint["learning_starts"]
@@ -85,6 +96,7 @@ class DQN:
         exploration_fraction = checkpoint["exploration_fraction"]
         exploration_initial_eps = checkpoint["exploration_initial_eps"]
         exploration_final_eps = checkpoint["exploration_final_eps"]
+        policy_kwargs = checkpoint["policy_kwargs"]
         seed = checkpoint["seed"]
         env_observation_space = checkpoint["env_observation_space"]
         env_action_space = checkpoint["env_action_space"]
@@ -98,6 +110,7 @@ class DQN:
 
         # Create new DQN instance
         dqn = cls(
+            policy,
             env,
             learning_rate,
             buffer_size,
@@ -110,6 +123,7 @@ class DQN:
             exploration_fraction,
             exploration_initial_eps,
             exploration_final_eps,
+            policy_kwargs,
             seed,
             device
         )
@@ -119,6 +133,7 @@ class DQN:
         if env is None:
             dqn.env_observation_space = env_observation_space
             dqn.env_action_space = env_action_space
+
             dqn._init_networks()
 
         # Restore network parameters
@@ -178,8 +193,8 @@ class DQN:
 
                     if verbose:
                         print(f"\nEvaluation: Timesteps = {t + 1}")
-                        print(f"Episode length = {episode_length["mean"]:.2f} +/- {episode_length["std"]:.2f}")
-                        print(f"Episode reward = {episode_reward["mean"]:.2f} +/- {episode_reward["std"]:.2f}")
+                        print(f"Episode length = {episode_length['mean']:.2f} +/- {episode_length['std']:.2f}")
+                        print(f"Episode reward = {episode_reward['mean']:.2f} +/- {episode_reward['std']:.2f}")
 
                     if episode_reward["mean"] > best_reward:
                         best_reward = episode_reward["mean"]
@@ -198,6 +213,7 @@ class DQN:
         path: str
     ):
         torch.save({
+            "policy": self.policy,
             "learning_rate": self.learning_rate,
             "buffer_size": self.buffer_size,
             "learning_starts": self.learning_starts,
@@ -209,6 +225,7 @@ class DQN:
             "exploration_fraction": self.exploration_fraction,
             "exploration_initial_eps": self.exploration_initial_eps,
             "exploration_final_eps": self.exploration_final_eps,
+            "policy_kwargs": self.policy_kwargs,
             "seed": self.seed,
             "env_observation_space": self.env_observation_space,
             "env_action_space": self.env_action_space,
@@ -241,10 +258,17 @@ class DQN:
             seed=self.seed
         )
 
+        match self.policy:
+            case "MLPPolicy":
+                network = MLPPolicy
+            case "CNNPolicy":
+                network = CNNPolicy
+
         # Initialize action-value function
-        self.q_network = QNetwork(
+        self.q_network = network(
             input_dim=self.env_observation_space.shape[0],
-            output_dim=self.env_action_space.n
+            output_dim=self.env_action_space.n,
+            **self.policy_kwargs
         ).to(self.device)
         self.q_network_optimizer = torch.optim.Adam(
             self.q_network.parameters(),
@@ -252,9 +276,10 @@ class DQN:
         )
 
         # Initialize target action-value function with same weights as action-value function
-        self.target_q_network = QNetwork(
+        self.target_q_network = network(
             input_dim=self.env_observation_space.shape[0],
-            output_dim=self.env_action_space.n
+            output_dim=self.env_action_space.n,
+            **self.policy_kwargs
         ).to(self.device)
         self.target_q_network.load_state_dict(self.q_network.state_dict())
 
