@@ -33,7 +33,7 @@ from rl_algorithms import DQN
 env = gym.make("CartPole-v1")
 
 # Instantiate DQN agent and train
-model = DQN(env)
+model = DQN("MLPPolicy", env)
 model.learn(total_timesteps=50_000)
 
 # Watch the trained agent play a game
@@ -59,7 +59,7 @@ env = gym.make("LunarLander-v3")
 eval_env = gym.make("LunarLander-v3")
 
 # Instantiate DQN agent
-model = DQN(env)
+model = DQN("MLPPolicy", env)
 # Train the agent
 # Evaluate the agent every 10k timesteps and save the best version of the agent
 model.learn(total_timesteps=500_000, eval_env=eval_env, eval_freq=10_000, best_model_save_path=".")

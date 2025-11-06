@@ -75,7 +75,7 @@ class DQN:
     def load(
         cls,
         path: str,
-        env: gym.Env | None = None,
+        env: Optional[gym.Env] = None,
         device: str = "auto"
     ):
         device = torch.device(("cuda" if torch.cuda.is_available() else "cpu") if device == "auto" else device)
@@ -145,10 +145,10 @@ class DQN:
     def learn(
         self,
         total_timesteps: int,
-        eval_env: gym.Env | None = None,
+        eval_env: Optional[gym.Env] = None,
         num_eval_episodes: int = 5,
         eval_freq: int = 10_000,
-        best_model_save_path: str | None = None,
+        best_model_save_path: Optional[str] = None,
         verbose: bool = True
     ):
         # Check if self.env has been set
