@@ -10,8 +10,8 @@ class DQNPolicy(nn.Module):
         action_space: Discrete,
         network_architecture: list[int],
         activation_fn: type[nn.Module],
-        feature_extractor_architecture: Optional[list[tuple]] = None,
-        normalize_images: bool = False
+        feature_extractor_architecture: Optional[list[tuple]],
+        normalize_images: bool
     ):
         super(DQNPolicy, self).__init__()
 
@@ -74,7 +74,8 @@ class MLPPolicy(DQNPolicy):
             action_space,
             network_architecture,
             activation_fn,
-            feature_extractor_architecture
+            feature_extractor_architecture,
+            normalize_images or False
         )
 
 class CNNPolicy(DQNPolicy):

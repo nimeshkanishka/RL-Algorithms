@@ -266,8 +266,8 @@ class DQN:
 
         # Initialize action-value function
         self.q_network = network(
-            input_dim=self.env_observation_space.shape[0],
-            output_dim=self.env_action_space.n,
+            observation_space=self.env_observation_space,
+            action_space=self.env_action_space,
             **self.policy_kwargs
         ).to(self.device)
         self.q_network_optimizer = torch.optim.Adam(
@@ -277,8 +277,8 @@ class DQN:
 
         # Initialize target action-value function with same weights as action-value function
         self.target_q_network = network(
-            input_dim=self.env_observation_space.shape[0],
-            output_dim=self.env_action_space.n,
+            observation_space=self.env_observation_space,
+            action_space=self.env_action_space,
             **self.policy_kwargs
         ).to(self.device)
         self.target_q_network.load_state_dict(self.q_network.state_dict())
